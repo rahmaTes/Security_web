@@ -1,0 +1,240 @@
+<?php
+// Include the configuration file
+include 'config.php';
+
+// Start the session
+session_start();
+
+// Get admin ID and user type from session
+$admin_id = $_SESSION['admin_id'];
+$user_type = $_SESSION['user_type'];
+
+// Redirect to login page if admin ID is not set
+if (!isset($admin_id)) {
+    header('location:login.php');
+    exit; // Stop execution after redirect
+}
+
+// Encryption function
+function encryptData($data, $key) {
+    // Implement your encryption logic here
+    // Example: return openssl_encrypt($data, 'AES-256-CBC', $key, 0, substr($key, 0, 16));
+}
+
+// Decryption function
+function decryptData($data, $key) {
+    // Implement your decryption logic here
+    // Example: return openssl_decrypt($data, 'AES-256-CBC', $key, 0, substr($key, 0, 16));
+}
+<!-- <script>
+   document.addEventListener('DOMContentLoaded', function() {
+      var loginForm = document.querySelector('form');
+      if (loginForm) {
+         loginForm.addEventListener('submit', function(event) {
+            var token = "<?php echo isset($_SESSION['token']) ? $_SESSION['token'] : '' ?>";
+            if (token) {
+               localStorage.setItem('token', token); // Changed sessionStorage to localStorage
+            }
+         });
+      }
+   });
+</script> -->
+
+// Handle add product form submission
+if (isset($_POST['add_product'])) {
+    $name = mysqli_real_escape_string($conn, $_POST['name']);
+    $price = $_POST['price'];
+    $image = $_FILES['image']['name'];
+    $image_size = $_FILES['image']['size'];
+    $image_tmp_name = $_FILES['image']['tmp_name'];
+    $image_folder = 'uploaded_img/' . $image;
+
+    // Encrypt sensitive data before insertion
+    $encryptedName = encryptData($name, 'YourSecretKeyHere');
+    $encryptedPrice = encryptData($price, 'YourSecretKeyHere');
+
+    // Rest of your code...
+}
+
+// Handle update product form submission
+if (isset($_POST['update_product'])) {
+    // Retrieve form data
+    $update_p_id = $_POST['update_p_id'];
+    $update_name = $_POST['update_name'];
+    $update_price = $_POST['update_price'];
+
+    // Encrypt sensitive data before update
+    $encryptedName = encryptData($update_name, 'YourSecretKeyHere');
+    $encryptedPrice = encryptData($update_price, 'YourSecretKeyHere');
+
+    // Rest of your code...
+}
+
+// Display decrypted data from the database
+$select_products = mysqli_query($conn, "SELECT * FROM `products`") or die('query failed');
+if (mysqli_num_rows($select_products) > 0) {
+    while ($fetch_products = mysqli_fetch_assoc($select_products)) {
+        // Decrypt sensitive data before displaying
+        $decryptedName = decryptData($fetch_products['name'], 'YourSecretKeyHere');
+        $decryptedPrice = decryptData($fetch_products['price'], 'YourSecretKeyHere');
+
+       
+    }
+}
+?>
+<?php
+// Encryption function
+function encryptData($data, $key) {
+    // Generate a random initialization vector (IV)
+    $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+    // Encrypt the data using AES-256-CBC cipher with the provided key and IV
+    $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
+    // Concatenate the IV and encrypted data and encode in base64
+    $encoded = base64_encode($iv . $encrypted);
+    return $encoded;
+}
+
+// Decryption function
+function decryptData($data, $key) {
+    // Decode the base64 encoded data
+    $decoded = base64_decode($data);
+    // Extract the IV (first 16 bytes) and the encrypted data
+    $iv = substr($decoded, 0, openssl_cipher_iv_length('aes-256-cbc'));
+    $encrypted = substr($decoded, openssl_cipher_iv_length('aes-256-cbc'));
+    // Decrypt the encrypted data using AES-256-CBC cipher with the provided key and IV
+    $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+    return $decrypted;
+}
+
+// Usage example
+$key = 'YourSecretKeyHere'; // Replace with your actual secret key
+
+// Encrypting data
+$originalData = 'Sensitive information';
+$encryptedData = encryptData($originalData, $key);
+echo "Encrypted data: $encryptedData\n";
+
+// Decrypting data
+$decryptedData = decryptData($encryptedData, $key);
+echo "Decrypted data: $decryptedData\n";
+?>
+<?php
+
+include 'config.php';
+session_start();
+function generateToken() {
+   return bin2hex(random_bytes(16));
+}
+
+if(isset($_POST['submit'])){
+
+   $email = mysqli_real_escape_string($conn, $_POST['email']);
+   $pass = mysqli_real_escape_string($conn, md5($_POST['password']));
+
+   $select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE email = '$email' AND password = '$pass'") or die('query failed');
+
+   if(mysqli_num_rows($select_users) > 0){
+
+      $row = mysqli_fetch_assoc($select_users);
+
+      if (!isset($_SESSION['token'])) {
+         $_SESSION['token'] = generateToken();
+      }
+
+      
+
+      if($row['user_type'] == 'admin'){
+
+         $_SESSION['admin_name'] = $row['name'];
+         $_SESSION['admin_email'] = $row['email'];
+         $_SESSION['admin_id'] = $row['id'];
+         $_SESSION['user_type'] = 'admin';
+         header('location:admin_page.php');
+
+      }elseif($row['user_type'] == 'user'){
+
+         $_SESSION['user_name'] = $row['name'];
+         $_SESSION['user_email'] = $row['email'];
+         $_SESSION['user_id'] = $row['id'];
+         $_SESSION['user_type'] = 'basic';
+         header('location:home.php');
+
+      }
+      elseif($row['user_type'] == 'premium'){
+
+      $_SESSION['user_name'] = $row['name'];
+      $_SESSION['user_email'] = $row['email'];
+      $_SESSION['user_id'] = $row['id'];
+      $_SESSION['user_type'] = 'premium';
+      header('location:home.php');
+
+   }
+   elseif($row['user_type'] == 'author'){
+
+      $_SESSION['user_name'] = $row['name'];
+      $_SESSION['user_email'] = $row['email'];
+      $_SESSION['admin_id'] = $row['id'];
+      $_SESSION['user_id'] = $row['id'];
+      $_SESSION['user_type'] = 'author';
+      header('location:home.php');
+   }
+
+   }else{
+      $message[] = 'incorrect email or password!';
+   }
+
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>login</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+<?php
+if(isset($message)){
+   foreach($message as $message){
+      echo '
+      <div class="message">
+         <span>'.$message.'</span>
+         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
+      </div>
+      ';
+   }
+}
+?>
+   
+<div class="form-container">
+
+   <form action="" method="post">
+      <h3>login now</h3>
+      <input type="email" name="email" placeholder="enter your email" required class="box">
+      <input type="password" name="password" placeholder="enter your password" required class="box">
+      <input type="submit" name="submit" value="login now" class="btn">
+      <p>don't have an account? <a href="register.php">register now</a></p>
+   </form>
+
+</div>
+<script>
+   document.getElementById('loginForm').addEventListener('submit', function(event) {
+      var token = "<?php echo isset($_SESSION['token']) ? $_SESSION['token'] : '' ?>";
+      if (token) {
+         localStorage.setItem('token', token);
+      }
+   });
+</script>
+</body>
+</html>
